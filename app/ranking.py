@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 import time
 from dataclasses import dataclass
@@ -16,36 +15,11 @@ RESULTS_PER_PAGE = 10
 MAX_RESULTS = 50
 MAX_PAGES = 5
 DUCKDUCKGO_HTML_URL = "https://html.duckduckgo.com/html/"
-DEBUG_LOG_PATH = "/Users/jorgepaez/serp-tracker/.cursor/debug-121916.log"
 
-USER_AGENTS = [
-    (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
-    ),
-]
-
-
-def _debug_log(hypothesis_id: str, location: str, message: str, data: dict) -> None:
-    # #region agent log
-    try:
-        with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as handle:
-            handle.write(
-                json.dumps(
-                    {
-                        "sessionId": "121916",
-                        "hypothesisId": hypothesis_id,
-                        "location": location,
-                        "message": message,
-                        "data": data,
-                        "timestamp": int(time.time() * 1000),
-                    }
-                )
-                + "\n"
-            )
-    except Exception:
-        pass
-    # #endregion
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
+    "(KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+)
 
 
 @dataclass(frozen=True)
@@ -143,6 +117,20 @@ def extract_organic_urls(html: str) -> list[str]:
     return urls
 
 
+def next_page_payload(html: str) -> dict[str, str] | None:
+    soup = BeautifulSoup(html, "html.parser")
+    for form in soup.select("form"):
+        names = {inp.get("name") for inp in form.select("input[name]")}
+        if "s" in names and "vqd" in names:
+            payload: dict[str, str] = {}
+            for inp in form.select("input[name]"):
+                if (inp.get("type") or "").lower() == "submit":
+                    continue
+                payload[str(inp.get("name"))] = inp.get("value") or ""
+            return payload
+    return None
+
+
 def page_for_result(result_number: int, per_page: int = RESULTS_PER_PAGE) -> int:
     return ((result_number - 1) // per_page) + 1
 
@@ -191,42 +179,52 @@ def hit_from_urls(
 
 def _headers() -> dict[str, str]:
     return {
-        "User-Agent": USER_AGENTS[0],
+        "User-Agent": USER_AGENT,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://html.duckduckgo.com/",
+        "Referer": DUCKDUCKGO_HTML_URL,
     }
 
 
-def _page_payload(keyword: str, page_index: int) -> dict[str, str]:
-    payload = {"q": keyword, "kl": "us-en"}
-    if page_index > 0:
-        payload["s"] = str(10 + (page_index - 1) * 15)
-    return payload
+class DuckDuckGoClient:
+    def __init__(self) -> None:
+        self.client = httpx.Client(
+            timeout=httpx.Timeout(20.0),
+            follow_redirects=True,
+            headers=_headers(),
+        )
 
+    def close(self) -> None:
+        self.client.close()
 
-def fetch_duckduckgo_urls(keyword: str, max_results: int = MAX_RESULTS) -> list[str]:
-    organic: list[str] = []
-    seen: set[str] = set()
-    with httpx.Client(timeout=httpx.Timeout(20.0), follow_redirects=True, headers=_headers()) as client:
-        for page_index in range(MAX_PAGES):
-            response = client.post(DUCKDUCKGO_HTML_URL, data=_page_payload(keyword, page_index))
+    def __enter__(self) -> "DuckDuckGoClient":
+        self.warm()
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+    def warm(self) -> None:
+        self.client.get(DUCKDUCKGO_HTML_URL)
+
+    def _search(self, data: dict[str, str]) -> httpx.Response:
+        response = self.client.post(DUCKDUCKGO_HTML_URL, data=data)
+        if response.status_code == 202 or not extract_organic_urls(response.text):
+            self.warm()
+            time.sleep(0.4)
+            response = self.client.post(DUCKDUCKGO_HTML_URL, data=data)
+        return response
+
+    def rank(self, keyword: str, target_url: str, max_results: int = MAX_RESULTS) -> RankHit:
+        organic: list[str] = []
+        seen: set[str] = set()
+        payload: dict[str, str] | None = {"q": keyword, "kl": "us-en"}
+
+        for _page_index in range(MAX_PAGES):
+            if payload is None:
+                break
+            response = self._search(payload)
             page_urls = extract_organic_urls(response.text)
-            # #region agent log
-            _debug_log(
-                "A",
-                "ranking.py:fetch_duckduckgo_urls",
-                "Fetched DuckDuckGo HTML page",
-                {
-                    "keyword": keyword,
-                    "page_index": page_index,
-                    "status_code": response.status_code,
-                    "html_len": len(response.text),
-                    "page_url_count": len(page_urls),
-                    "engine": "html.duckduckgo.com",
-                },
-            )
-            # #endregion
             if response.status_code != 200 or not page_urls:
                 if not organic:
                     raise RuntimeError(
@@ -238,89 +236,26 @@ def fetch_duckduckgo_urls(keyword: str, max_results: int = MAX_RESULTS) -> list[
                     continue
                 seen.add(url)
                 organic.append(url)
-                if len(organic) >= max_results:
-                    return organic
-            if page_index < MAX_PAGES - 1:
+                if url_matches_target(url, target_url) or len(organic) >= max_results:
+                    return hit_from_urls(keyword, target_url, organic, "DuckDuckGo")
+            payload = next_page_payload(response.text)
+            if payload is not None:
                 time.sleep(0.4)
-    return organic
+        return hit_from_urls(keyword, target_url, organic, "DuckDuckGo")
 
 
 def rank_with_duckduckgo(keyword: str, target_url: str, max_results: int = MAX_RESULTS) -> RankHit:
-    organic: list[str] = []
-    seen: set[str] = set()
-    try:
-        with httpx.Client(timeout=httpx.Timeout(20.0), follow_redirects=True, headers=_headers()) as client:
-            for page_index in range(MAX_PAGES):
-                response = client.post(DUCKDUCKGO_HTML_URL, data=_page_payload(keyword, page_index))
-                page_urls = extract_organic_urls(response.text)
-                # #region agent log
-                _debug_log(
-                    "A",
-                    "ranking.py:rank_with_duckduckgo",
-                    "Fetched DuckDuckGo HTML page",
-                    {
-                        "keyword": keyword,
-                        "page_index": page_index,
-                        "status_code": response.status_code,
-                        "html_len": len(response.text),
-                        "page_url_count": len(page_urls),
-                        "engine": "html.duckduckgo.com",
-                    },
-                )
-                # #endregion
-                if response.status_code != 200 or not page_urls:
-                    if not organic:
-                        raise RuntimeError(
-                            "DuckDuckGo did not return search results. Try again in a moment."
-                        )
-                    break
-                for url in page_urls:
-                    if url in seen:
-                        continue
-                    seen.add(url)
-                    organic.append(url)
-                    if url_matches_target(url, target_url) or len(organic) >= max_results:
-                        # #region agent log
-                        _debug_log(
-                            "C",
-                            "ranking.py:rank_with_duckduckgo",
-                            "Parsed DuckDuckGo organic URLs",
-                            {
-                                "keyword": keyword,
-                                "organic_count": len(organic),
-                                "first_host": host_of(organic[0]) if organic else None,
-                            },
-                        )
-                        # #endregion
-                        return hit_from_urls(keyword, target_url, organic, "DuckDuckGo")
-                if page_index < MAX_PAGES - 1:
-                    time.sleep(0.4)
-    except Exception as exc:
-        # #region agent log
-        _debug_log(
-            "A",
-            "ranking.py:rank_with_duckduckgo",
-            "DuckDuckGo lookup failed",
-            {"keyword": keyword, "error_type": type(exc).__name__, "error": str(exc)[:300]},
-        )
-        # #endregion
-        raise
-    # #region agent log
-    _debug_log(
-        "C",
-        "ranking.py:rank_with_duckduckgo",
-        "Parsed DuckDuckGo organic URLs",
-        {"keyword": keyword, "organic_count": len(organic), "first_host": host_of(organic[0]) if organic else None},
-    )
-    # #endregion
-    return hit_from_urls(keyword, target_url, organic, "DuckDuckGo")
+    with DuckDuckGoClient() as client:
+        return client.rank(keyword, target_url, max_results=max_results)
 
 
 def lookup_ranks(keywords: Iterable[str], target_url: str) -> RankReport:
     target = normalize_url(target_url)
+    keyword_list = list(keywords)
     hits: list[RankHit] = []
-    for index, keyword in enumerate(keywords):
-        if index:
-            time.sleep(0.4)
-        hits.append(rank_with_duckduckgo(keyword, target))
+    with DuckDuckGoClient() as client:
+        for index, keyword in enumerate(keyword_list):
+            if index:
+                time.sleep(0.5)
+            hits.append(client.rank(keyword, target))
     return RankReport(url=target, source="duckduckgo", notice=None, results=hits)

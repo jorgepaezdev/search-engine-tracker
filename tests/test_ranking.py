@@ -2,6 +2,7 @@ from app.ranking import (
     extract_organic_urls,
     format_rank,
     hit_from_urls,
+    next_page_payload,
     page_for_result,
     parse_keywords,
     url_matches_target,
@@ -84,18 +85,42 @@ def test_hit_from_urls_finds_first_match():
     assert hit.matched_url == "https://docs.python.org/3/"
 
 
+def test_next_page_payload_reads_ddg_form():
+    html = """
+    <form action="/html/" method="post">
+      <input type="submit" value="Next" />
+      <input name="q" value="fastapi" />
+      <input name="s" value="10" />
+      <input name="vqd" value="abc" />
+      <input name="kl" value="us-en" />
+    </form>
+    """
+    payload = next_page_payload(html)
+    assert payload is not None
+    assert payload["q"] == "fastapi"
+    assert payload["s"] == "10"
+    assert payload["vqd"] == "abc"
+
+
 def test_lookup_uses_duckduckgo_only(monkeypatch):
-    monkeypatch.setattr(
-        "app.ranking.rank_with_duckduckgo",
-        lambda keyword, target: RankHit(
-            keyword=keyword,
-            found=True,
-            result_number=1,
-            page_number=1,
-            matched_url="https://www.python.org/",
-            note="Result #1, page 1",
-        ),
-    )
+    class FakeClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def rank(self, keyword, target, max_results=50):
+            return RankHit(
+                keyword=keyword,
+                found=True,
+                result_number=1,
+                page_number=1,
+                matched_url="https://www.python.org/",
+                note="Result #1, page 1",
+            )
+
+    monkeypatch.setattr("app.ranking.DuckDuckGoClient", lambda: FakeClient())
     report = lookup_ranks(["python"], "python.org")
     assert report.source == "duckduckgo"
     assert report.notice is None
