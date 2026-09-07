@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Search Engine Tracker</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <p class="eyebrow">Search Engine Tracker</p>
+        <h1>See where a site sits on DuckDuckGo.</h1>
+        <p class="lede">
+          Enter keywords and a website URL. Submit to look up each keyword on
+          DuckDuckGo and list the organic result number and page for that site.
+        </p>
+      </header>
+
+      <main>
+        <form id="rank-form" novalidate>
+          <div class="fields">
+            <label class="field">
+              <span class="label-row">
+                <span>Keywords</span>
+                <span class="hint">Comma-separated, max 8</span>
+              </span>
+              <textarea
+                id="keywords"
+                name="keywords"
+                required
+                rows="3"
+                placeholder="python web framework, fastapi tutorial, uvicorn"
+                aria-describedby="keyword-count"
+              ></textarea>
+              <span id="keyword-count" class="count">0 / 8 keywords</span>
+            </label>
+
+            <label class="field">
+              <span class="label-row">
+                <span>URL</span>
+                <span class="hint">The site to find on DuckDuckGo</span>
+              </span>
+              <input
+                id="url"
+                name="url"
+                type="text"
+                required
+                inputmode="url"
+                autocomplete="url"
+                placeholder="https://fastapi.tiangolo.com"
+              />
+            </label>
+          </div>
+
+          <button type="submit" id="submit-btn">Submit</button>
+        </form>
+
+        <section class="results" aria-live="polite">
+          <div id="status" class="status idle">
+            Results appear here after you submit. Up to the first 50 DuckDuckGo
+            results are checked for each keyword.
+          </div>
+
+          <div class="table-wrap" id="table-wrap" hidden>
+            <table>
+              <caption id="table-caption"></caption>
+              <thead>
+                <tr>
+                  <th scope="col">Keyword</th>
+                  <th scope="col">Search position</th>
+                </tr>
+              </thead>
+              <tbody id="results-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

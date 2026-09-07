@@ -1,0 +1,275 @@
+:root {
+  --ink: #1b2416;
+  --muted: #5c6754;
+  --paper: #f4efe4;
+  --card: #fffdf8;
+  --line: #d7d0c2;
+  --accent: #2f5d32;
+  --accent-dark: #214626;
+  --warn: #8a3b12;
+  --found: #1f6b3a;
+  --missing: #7a4b1e;
+  --shadow: 0 18px 40px rgba(40, 36, 24, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: system-ui, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 500px at 10% -10%, #efe4c8 0%, transparent 60%),
+    linear-gradient(180deg, #f7f1e4 0%, var(--paper) 40%, #ece6d8 100%);
+}
+
+.shell {
+  width: min(920px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 48px 0 80px;
+}
+
+.hero h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 8px 0 16px;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.lede {
+  margin: 0 0 32px;
+  max-width: 42rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+form {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.fields {
+  display: grid;
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.hint {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.count {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.count.over {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid #cfc7b6;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  padding: 12px 14px;
+  outline: none;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(47, 93, 50, 0.16);
+}
+
+button {
+  margin-top: 18px;
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #f7f4ea;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 13px 18px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-dark);
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.results {
+  margin-top: 28px;
+}
+
+.status {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  background: rgba(255, 253, 248, 0.6);
+}
+
+.status.loading {
+  border-style: solid;
+  color: var(--ink);
+}
+
+.status.error {
+  border-style: solid;
+  border-color: #e4c2ae;
+  color: var(--warn);
+  background: #fff4ec;
+}
+
+.status.notice {
+  border-style: solid;
+  border-color: #e0d0a8;
+  color: #6b5318;
+  background: #fff7e4;
+}
+
+.table-wrap {
+  margin-top: 16px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+}
+
+caption {
+  caption-side: top;
+  text-align: left;
+  padding: 16px 18px 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  padding: 14px 18px;
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+
+tbody tr + tr td {
+  border-top: 1px solid #eee7d8;
+}
+
+td.keyword {
+  font-weight: 600;
+  width: 42%;
+}
+
+td.position {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+}
+
+td.position .found {
+  color: var(--found);
+}
+
+td.position .missing {
+  color: var(--missing);
+}
+
+td.position a {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-family: system-ui, "Segoe UI", sans-serif;
+  font-size: 0.78rem;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+td.position a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .shell {
+    padding-top: 28px;
+  }
+
+  .label-row {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  table {
+    min-width: 0;
+  }
+
+  th:last-child,
+  td.position {
+    min-width: 180px;
+  }
+}
