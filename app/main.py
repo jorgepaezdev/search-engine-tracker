@@ -47,7 +47,10 @@ def home(request: Request) -> HTMLResponse:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "python": sys.version.split()[0]}
+    return {
+        "status": "ok",
+        "python": f"{sys.version_info.major}.{sys.version_info.minor}",
+    }
 
 
 @app.post("/api/rank", response_model=RankResponse)

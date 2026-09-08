@@ -18,7 +18,7 @@ def test_health_reports_python_3_10():
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ok"
-    assert payload["python"].startswith("3.10.")
+    assert payload["python"] == "3.10"
 
 
 def test_home_renders_fields():
