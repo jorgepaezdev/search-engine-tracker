@@ -20,7 +20,7 @@ Lookups use **DuckDuckGo** web results.
 
 ## Requirements
 
-This app is pinned to **Python 3.10**. Use that interpreter for the virtualenv and runtime.
+This app is pinned to **Python 3.10**. Local runs, CI, Docker, and PaaS deploys (`runtime.txt`) all use that interpreter.
 
 ## Run locally
 

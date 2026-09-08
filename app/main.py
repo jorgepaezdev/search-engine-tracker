@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -46,7 +47,7 @@ def home(request: Request) -> HTMLResponse:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "python": sys.version.split()[0]}
 
 
 @app.post("/api/rank", response_model=RankResponse)

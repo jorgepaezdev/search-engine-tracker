@@ -1,3 +1,5 @@
+import sys
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -5,6 +7,18 @@ from app.ranking import RankHit, RankReport
 
 
 client = TestClient(app)
+
+
+def test_python_version_is_3_10():
+    assert sys.version_info[:2] == (3, 10)
+
+
+def test_health_reports_python_3_10():
+    response = client.get("/health")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["python"].startswith("3.10.")
 
 
 def test_home_renders_fields():
