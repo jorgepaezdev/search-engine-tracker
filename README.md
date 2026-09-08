@@ -1,6 +1,6 @@
 # Search Engine Tracker
 
-Python 3.9.6 web app that checks where a website ranks for a list of keywords on DuckDuckGo.
+Python 3.10 web app that checks where a website ranks for a list of keywords on DuckDuckGo.
 
 ## What it does
 
@@ -20,12 +20,12 @@ Lookups use **DuckDuckGo** web results.
 
 ## Requirements
 
-This app is pinned to **Python 3.9.6**, matching the interpreter on this machine.
+This app is pinned to **Python 3.10**. Use that interpreter for the virtualenv and runtime.
 
 ## Run locally
 
 ```bash
-python3 -m venv .venv
+python3.10 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 127.0.0.1 --port 48621
@@ -36,7 +36,7 @@ Open [http://127.0.0.1:48621](http://127.0.0.1:48621).
 ## Tests
 
 ```bash
-python3 -m pytest -q
+python3.10 -m pytest -q
 ```
 
 ## Notes
