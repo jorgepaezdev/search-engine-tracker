@@ -1,15 +1,34 @@
 ---
-description: Update standalone tools first, then copy to the website
+description: Standalone tool repos are the source of truth; copy onto the website second
 alwaysApply: true
 ---
 
-# Standalone tools first
+# Standalone first, website second
 
-When changing the accessibility checker or the search engine ranker:
+Any time a standalone tool changes — the accessibility checker, the search engine ranker, or a future tool that also appears on the site — update that tool’s own GitHub repo first. Only then copy the same product change onto the website.
 
-1. Update the standalone GitHub repo first:
-   - `https://github.com/jorgepaezdev/accessibility-checker`
-   - `https://github.com/jorgepaezdev/search-engine-tracker`
-2. Then copy the same product change onto `https://github.com/jorgepaezdev/website` (the `/accessibility-checker` and `/search-engine-ranking-tool` pages).
-3. Never change the website copy of a tool without updating the standalone repo first.
-4. Sync exclusively with GitHub. Never use Origin.
+## Source of truth
+
+| Tool | Edit first (standalone) | Copy second (website) |
+| --- | --- | --- |
+| Accessibility checker | https://github.com/jorgepaezdev/accessibility-checker | `/accessibility-checker` on https://github.com/jorgepaezdev/website |
+| Search ranker | https://github.com/jorgepaezdev/search-engine-tracker | `/search-engine-ranking-tool` on https://github.com/jorgepaezdev/website |
+
+The standalone repo is canonical. The website page is a downstream copy of the same product.
+
+This repo is the source of truth for the search ranker. After a change here is committed and pushed, copy it onto the website `/search-engine-ranking-tool` page.
+
+## Required order
+
+1. Implement, test, commit, and push in the standalone GitHub repo.
+2. Then port that same product change onto the matching website page: behavior, copy, empty/error/loading states.
+3. Never start a tool change on the website. If a request only mentions the site page, still update the standalone repo first, then copy it over.
+4. Do not ship a website-only tool change and sync later.
+
+## What “copy” means
+
+Match the user-facing product. Stacks may differ (Python standalone vs Next.js site) unless Jorge asks to embed the standalone app. Port the product change; do not dump the Python app into Next.js by default.
+
+## Git
+
+Sync exclusively with GitHub. Never Origin.

@@ -18,6 +18,10 @@ The left column is the keyword. The right column is the organic result number an
 
 Lookups use **DuckDuckGo** web results.
 
+## Website copy
+
+This repo is the source of truth. After a change here is committed and pushed, copy the same product change onto the [website](https://github.com/jorgepaezdev/website) `/search-engine-ranking-tool` page. Do not start ranker work on the website.
+
 ## Requirements
 
 This app is pinned to **Python 3.10**. Local runs, CI, Docker, and PaaS deploys (`runtime.txt`) all use that interpreter.
