@@ -10,16 +10,29 @@
     <div class="shell">
       <header class="hero">
         <p class="eyebrow">Search Engine Tracker</p>
-        <h1>See where a site sits on DuckDuckGo.</h1>
+        <h1>See where a site sits on DuckDuckGo or Bing.</h1>
         <p class="lede">
-          Enter keywords and a website URL. Submit to look up each keyword on
-          DuckDuckGo and list the organic result number and page for that site.
+          Choose a search engine, enter keywords and a website URL, then submit.
+          Each keyword is looked up on the engine you picked, and the table lists
+          the organic result number and page for that site.
         </p>
       </header>
 
       <main>
         <form id="rank-form" novalidate>
           <div class="fields">
+            <label class="field">
+              <span class="label-row">
+                <span>Search engine</span>
+                <span class="hint">DuckDuckGo or Bing</span>
+              </span>
+              <select id="engine" name="engine" required>
+                <option value="" disabled selected>Choose DuckDuckGo or Bing</option>
+                <option value="duckduckgo">DuckDuckGo</option>
+                <option value="bing">Bing</option>
+              </select>
+            </label>
+
             <label class="field">
               <span class="label-row">
                 <span>Keywords</span>
@@ -39,7 +52,7 @@
             <label class="field">
               <span class="label-row">
                 <span>URL</span>
-                <span class="hint">The site to find on DuckDuckGo</span>
+                <span class="hint">The site to find in the selected engine</span>
               </span>
               <input
                 id="url"
@@ -58,8 +71,8 @@
 
         <section class="results" aria-live="polite">
           <div id="status" class="status idle">
-            Results appear here after you submit. Up to the first 50 DuckDuckGo
-            results are checked for each keyword.
+            Results appear here after you submit. Up to the first 50 results are
+            checked for each keyword.
           </div>
 
           <div class="table-wrap" id="table-wrap" hidden>

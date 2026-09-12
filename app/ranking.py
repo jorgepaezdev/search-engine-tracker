@@ -1,11 +1,12 @@
-"""Look up where a URL appears in DuckDuckGo organic results for given keywords."""
+"""Look up where a URL appears in DuckDuckGo or Bing organic results for given keywords."""
 
 from __future__ import annotations
 
 import re
 import time
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, Literal
 from urllib.parse import parse_qs, unquote, urlparse
 
 import httpx
@@ -15,6 +16,13 @@ RESULTS_PER_PAGE = 10
 MAX_RESULTS = 50
 MAX_PAGES = 5
 DUCKDUCKGO_HTML_URL = "https://html.duckduckgo.com/html/"
+BING_SEARCH_URL = "https://www.bing.com/search"
+
+SearchEngine = Literal["duckduckgo", "bing"]
+ENGINE_LABELS = {
+    "duckduckgo": "DuckDuckGo",
+    "bing": "Bing",
+}
 
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
@@ -30,6 +38,15 @@ class RankHit:
     page_number: int | None
     matched_url: str | None
     note: str
+
+
+def parse_engine(raw: str) -> SearchEngine:
+    value = (raw or "").strip().lower()
+    if value in {"duckduckgo", "ddg", "duck"}:
+        return "duckduckgo"
+    if value == "bing":
+        return "bing"
+    raise ValueError("Choose DuckDuckGo or Bing.")
 
 
 def parse_keywords(raw: str) -> list[str]:
@@ -97,6 +114,35 @@ def unwrap_ddg_href(href: str) -> str | None:
     if parsed.scheme in {"http", "https"}:
         return href
     return None
+
+
+def extract_bing_rss_urls(xml_text: str) -> list[str]:
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return []
+    urls: list[str] = []
+    seen: set[str] = set()
+    for item in root.iter():
+        tag = item.tag.rsplit("}", 1)[-1].lower()
+        if tag != "item":
+            continue
+        link = ""
+        for child in item:
+            child_tag = child.tag.rsplit("}", 1)[-1].lower()
+            if child_tag == "link":
+                link = (child.text or "").strip()
+                break
+        if not link:
+            continue
+        host = host_of(link)
+        if not host or host.endswith("bing.com") or host.endswith("microsoft.com"):
+            continue
+        if link in seen:
+            continue
+        seen.add(link)
+        urls.append(link)
+    return urls
 
 
 def extract_organic_urls(html: str) -> list[str]:
@@ -177,12 +223,12 @@ def hit_from_urls(
     )
 
 
-def _headers() -> dict[str, str]:
+def _headers(referer: str) -> dict[str, str]:
     return {
         "User-Agent": USER_AGENT,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
-        "Referer": DUCKDUCKGO_HTML_URL,
+        "Referer": referer,
     }
 
 
@@ -191,7 +237,7 @@ class DuckDuckGoClient:
         self.client = httpx.Client(
             timeout=httpx.Timeout(20.0),
             follow_redirects=True,
-            headers=_headers(),
+            headers=_headers(DUCKDUCKGO_HTML_URL),
         )
 
     def close(self) -> None:
@@ -249,13 +295,82 @@ def rank_with_duckduckgo(keyword: str, target_url: str, max_results: int = MAX_R
         return client.rank(keyword, target_url, max_results=max_results)
 
 
-def lookup_ranks(keywords: Iterable[str], target_url: str) -> RankReport:
+class BingClient:
+    def __init__(self) -> None:
+        self.client = httpx.Client(
+            timeout=httpx.Timeout(20.0),
+            follow_redirects=True,
+            headers=_headers("https://www.bing.com/"),
+        )
+
+    def close(self) -> None:
+        self.client.close()
+
+    def __enter__(self) -> "BingClient":
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+    def rank(self, keyword: str, target_url: str, max_results: int = MAX_RESULTS) -> RankHit:
+        organic: list[str] = []
+        seen: set[str] = set()
+        first = 1
+
+        for _page_index in range(MAX_PAGES):
+            remaining = max_results - len(organic)
+            if remaining <= 0:
+                break
+            response = self.client.get(
+                BING_SEARCH_URL,
+                params={
+                    "q": keyword,
+                    "format": "rss",
+                    "count": str(min(RESULTS_PER_PAGE, remaining)),
+                    "first": str(first),
+                },
+            )
+            page_urls = extract_bing_rss_urls(response.text)
+            if response.status_code != 200 or not page_urls:
+                if not organic:
+                    raise RuntimeError(
+                        "Bing did not return search results. Try again in a moment."
+                    )
+                break
+            new_on_page = 0
+            for url in page_urls:
+                if url in seen:
+                    continue
+                seen.add(url)
+                organic.append(url)
+                new_on_page += 1
+                if url_matches_target(url, target_url) or len(organic) >= max_results:
+                    return hit_from_urls(keyword, target_url, organic, "Bing")
+            if new_on_page == 0:
+                break
+            first += new_on_page
+            time.sleep(0.3)
+        return hit_from_urls(keyword, target_url, organic, "Bing")
+
+
+def rank_with_bing(keyword: str, target_url: str, max_results: int = MAX_RESULTS) -> RankHit:
+    with BingClient() as client:
+        return client.rank(keyword, target_url, max_results=max_results)
+
+
+def lookup_ranks(
+    keywords: Iterable[str],
+    target_url: str,
+    engine: str = "duckduckgo",
+) -> RankReport:
+    selected = parse_engine(engine)
     target = normalize_url(target_url)
     keyword_list = list(keywords)
     hits: list[RankHit] = []
-    with DuckDuckGoClient() as client:
+    client_cls = BingClient if selected == "bing" else DuckDuckGoClient
+    with client_cls() as client:
         for index, keyword in enumerate(keyword_list):
             if index:
                 time.sleep(0.5)
             hits.append(client.rank(keyword, target))
-    return RankReport(url=target, source="duckduckgo", notice=None, results=hits)
+    return RankReport(url=target, source=selected, notice=None, results=hits)

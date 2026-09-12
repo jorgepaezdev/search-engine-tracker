@@ -1,6 +1,7 @@
 const MAX_KEYWORDS = 8;
 
 const form = document.getElementById("rank-form");
+const engineInput = document.getElementById("engine");
 const keywordsInput = document.getElementById("keywords");
 const urlInput = document.getElementById("url");
 const submitBtn = document.getElementById("submit-btn");
@@ -38,13 +39,23 @@ function updateKeywordCount() {
 keywordsInput.addEventListener("input", updateKeywordCount);
 updateKeywordCount();
 
+function engineLabel(value) {
+  return value === "bing" ? "Bing" : "DuckDuckGo";
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
+  const engine = engineInput.value;
   const keywords = keywordsInput.value.trim();
   const url = urlInput.value.trim();
   const parsed = parseKeywords(keywords);
 
+  if (!engine) {
+    setStatus("Choose DuckDuckGo or Bing.", "error");
+    engineInput.focus();
+    return;
+  }
   if (!parsed.length) {
     setStatus("Enter at least one keyword.", "error");
     keywordsInput.focus();
@@ -65,11 +76,12 @@ form.addEventListener("submit", async (event) => {
   }
 
   const count = parsed.length;
+  const label = engineLabel(engine);
   submitBtn.disabled = true;
   tableWrap.hidden = true;
   resultsBody.replaceChildren();
   setStatus(
-    `Checking ${count} keyword${count === 1 ? "" : "s"} on DuckDuckGo. This can take a little while.`,
+    `Checking ${count} keyword${count === 1 ? "" : "s"} on ${label}. This can take a little while.`,
     "loading"
   );
 
@@ -77,7 +89,7 @@ form.addEventListener("submit", async (event) => {
     const response = await fetch("/api/rank", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keywords, url }),
+      body: JSON.stringify({ keywords, url, engine }),
     });
 
     const payload = await response.json().catch(() => ({}));
@@ -88,9 +100,10 @@ form.addEventListener("submit", async (event) => {
 
     renderResults(payload);
     const found = payload.results.filter((row) => row.found).length;
+    const sourceLabel = engineLabel(payload.source);
     setStatus(
       payload.notice ||
-        `Finished via DuckDuckGo. ${found} of ${payload.results.length} keyword${
+        `Finished via ${sourceLabel}. ${found} of ${payload.results.length} keyword${
           payload.results.length === 1 ? "" : "s"
         } ranked in the checked results.`,
       payload.notice ? "notice" : "idle"
@@ -103,7 +116,7 @@ form.addEventListener("submit", async (event) => {
 });
 
 function renderResults(payload) {
-  tableCaption.textContent = `DuckDuckGo positions for ${payload.url}`;
+  tableCaption.textContent = `${engineLabel(payload.source)} positions for ${payload.url}`;
   const positionHeader = document.querySelector("thead th:last-child");
   if (positionHeader) {
     positionHeader.textContent = "Search position";

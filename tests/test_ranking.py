@@ -1,9 +1,11 @@
 from app.ranking import (
+    extract_bing_rss_urls,
     extract_organic_urls,
     format_rank,
     hit_from_urls,
     next_page_payload,
     page_for_result,
+    parse_engine,
     parse_keywords,
     url_matches_target,
     RankHit,
@@ -102,7 +104,36 @@ def test_next_page_payload_reads_ddg_form():
     assert payload["vqd"] == "abc"
 
 
-def test_lookup_uses_duckduckgo_only(monkeypatch):
+def test_parse_engine_accepts_aliases():
+    assert parse_engine("DuckDuckGo") == "duckduckgo"
+    assert parse_engine("ddg") == "duckduckgo"
+    assert parse_engine("Bing") == "bing"
+
+
+def test_parse_engine_rejects_unknown():
+    try:
+        parse_engine("google")
+    except ValueError as exc:
+        assert "DuckDuckGo or Bing" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+
+def test_extract_bing_rss_urls():
+    xml = """
+    <rss><channel>
+      <item><title>Python</title><link>https://www.python.org/</link></item>
+      <item><title>Docs</title><link>https://docs.python.org/3/</link></item>
+      <item><title>Bing</title><link>https://www.bing.com/search</link></item>
+    </channel></rss>
+    """
+    assert extract_bing_rss_urls(xml) == [
+        "https://www.python.org/",
+        "https://docs.python.org/3/",
+    ]
+
+
+def test_lookup_uses_selected_engine(monkeypatch):
     class FakeClient:
         def __enter__(self):
             return self
@@ -121,8 +152,13 @@ def test_lookup_uses_duckduckgo_only(monkeypatch):
             )
 
     monkeypatch.setattr("app.ranking.DuckDuckGoClient", lambda: FakeClient())
-    report = lookup_ranks(["python"], "python.org")
-    assert report.source == "duckduckgo"
-    assert report.notice is None
-    assert report.results[0].result_number == 1
-    assert report.url == "https://python.org"
+    monkeypatch.setattr("app.ranking.BingClient", lambda: FakeClient())
+
+    ddg = lookup_ranks(["python"], "python.org", engine="duckduckgo")
+    assert ddg.source == "duckduckgo"
+    assert ddg.results[0].result_number == 1
+    assert ddg.url == "https://python.org"
+
+    bing = lookup_ranks(["python"], "python.org", engine="bing")
+    assert bing.source == "bing"
+    assert bing.results[0].result_number == 1

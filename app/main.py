@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
-from app.ranking import format_rank, lookup_ranks, parse_keywords
+from app.ranking import format_rank, lookup_ranks, parse_engine, parse_keywords
 
 ROOT = Path(__file__).resolve().parent
 
@@ -22,6 +22,7 @@ templates = Jinja2Templates(directory=str(ROOT / "templates"))
 class RankRequest(BaseModel):
     keywords: str = Field(..., min_length=1, max_length=2000)
     url: str = Field(..., min_length=1, max_length=2000)
+    engine: str = Field(..., min_length=1, max_length=32)
 
 
 class RankRow(BaseModel):
@@ -55,17 +56,22 @@ def health() -> dict[str, str]:
 
 @app.post("/api/rank", response_model=RankResponse)
 def rank(payload: RankRequest) -> RankResponse:
+    try:
+        engine = parse_engine(payload.engine)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     keywords = parse_keywords(payload.keywords)
     if not keywords:
         raise HTTPException(status_code=400, detail="Enter at least one keyword.")
     if len(keywords) > 8:
         raise HTTPException(
             status_code=400,
-            detail="Please enter at most 8 keywords so DuckDuckGo lookups stay reliable.",
+            detail="Please enter at most 8 keywords so lookups stay reliable.",
         )
 
     try:
-        report = lookup_ranks(keywords, payload.url)
+        report = lookup_ranks(keywords, payload.url, engine=engine)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:

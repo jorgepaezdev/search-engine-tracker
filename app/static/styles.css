@@ -104,7 +104,8 @@ form {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   border: 1px solid #cfc7b6;
   border-radius: 12px;
@@ -115,13 +116,19 @@ textarea {
   outline: none;
 }
 
+select {
+  appearance: auto;
+  cursor: pointer;
+}
+
 textarea {
   resize: vertical;
   min-height: 88px;
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(47, 93, 50, 0.16);
 }

@@ -26,6 +26,8 @@ def test_home_renders_fields():
     assert response.status_code == 200
     assert "Search Engine Tracker" in response.text
     assert "DuckDuckGo" in response.text
+    assert "Bing" in response.text
+    assert 'id="engine"' in response.text
     assert "Keywords" in response.text
     assert "URL" in response.text
     assert "Submit" in response.text
@@ -37,9 +39,9 @@ def test_home_renders_fields():
 def test_rank_endpoint(monkeypatch):
     monkeypatch.setattr(
         "app.main.lookup_ranks",
-        lambda keywords, url: RankReport(
+        lambda keywords, url, engine="duckduckgo": RankReport(
             url="https://www.python.org/",
-            source="duckduckgo",
+            source=engine,
             notice=None,
             results=[
                 RankHit(
@@ -55,18 +57,30 @@ def test_rank_endpoint(monkeypatch):
     )
     response = client.post(
         "/api/rank",
-        json={"keywords": "python, python", "url": "python.org"},
+        json={"keywords": "python, python", "url": "python.org", "engine": "bing"},
     )
     assert response.status_code == 200
     payload = response.json()
     assert payload["url"] == "https://www.python.org/"
-    assert payload["source"] == "duckduckgo"
+    assert payload["source"] == "bing"
     assert payload["results"][0]["keyword"] == "python"
     assert payload["results"][0]["position"] == "Result #1, page 1"
 
 
+def test_rank_rejects_unknown_engine():
+    response = client.post(
+        "/api/rank",
+        json={"keywords": "python", "url": "https://example.com", "engine": "google"},
+    )
+    assert response.status_code == 400
+    assert "DuckDuckGo or Bing" in response.json()["detail"]
+
+
 def test_rank_rejects_empty_keywords():
-    response = client.post("/api/rank", json={"keywords": " , , ", "url": "https://example.com"})
+    response = client.post(
+        "/api/rank",
+        json={"keywords": " , , ", "url": "https://example.com", "engine": "duckduckgo"},
+    )
     assert response.status_code == 400
 
 
@@ -74,7 +88,7 @@ def test_rank_rejects_too_many_keywords():
     keywords = ", ".join(f"keyword {index}" for index in range(9))
     response = client.post(
         "/api/rank",
-        json={"keywords": keywords, "url": "https://example.com"},
+        json={"keywords": keywords, "url": "https://example.com", "engine": "bing"},
     )
     assert response.status_code == 400
     assert "at most 8" in response.json()["detail"]
