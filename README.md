@@ -1,13 +1,14 @@
 # Search Engine Tracker
 
-Python 3.10 web app that checks where a website ranks for a list of keywords on DuckDuckGo.
+Python 3.10 web app that checks where a website ranks for a list of keywords on DuckDuckGo and Bing.
 
 ## What it does
 
-1. Enter **keywords** separated by commas.
-2. Enter the **URL** of the site you want to find.
-3. Click **Submit**.
-4. The app looks up each keyword on DuckDuckGo and shows a table:
+1. Select the **search engine** you'd like to use. Either DuckDuckGo or Bing.
+2. Enter **keywords** separated by commas.
+3. Enter the **URL** of the site you want to find.
+4. Click **Submit**.
+5. The app looks up each keyword on the selected search engine and shows a table:
 
 | Keyword | Search position |
 | --- | --- |
@@ -16,7 +17,7 @@ Python 3.10 web app that checks where a website ranks for a list of keywords on 
 
 The left column is the keyword. The right column is the organic result number and the page (10 results per page). If the site appears, the matching result URL is linked under the position.
 
-Lookups use **DuckDuckGo** web results.
+Lookups use **DuckDuckGo** or **Bing** web results.
 
 ## Website copy
 
