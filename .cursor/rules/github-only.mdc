@@ -1,0 +1,14 @@
+---
+description: Sync exclusively with GitHub, never Origin
+alwaysApply: true
+---
+
+# Source control
+
+Sync exclusively with GitHub. Never use Origin.
+
+- The git remote named `origin` must be a github.com URL for this project.
+- Never add, push to, clone from, or create Origin (`origin.cursor.com`) remotes or repositories.
+- Create new projects with `gh repo create` and point `origin` at GitHub.
+- Use `gh` and `git push origin` against GitHub. Do not use the Origin CLI to store this project.
+- This applies to every project, including the accessibility checker, the search engine ranker, and future repos.

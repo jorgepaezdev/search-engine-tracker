@@ -5,4 +5,6 @@ __pycache__/
 .cursor/*
 !.cursor/environment.json
 !.cursor/Dockerfile
+!.cursor/rules/
+!.cursor/rules/**
 
