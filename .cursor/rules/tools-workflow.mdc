@@ -1,0 +1,15 @@
+---
+description: Update standalone tools first, then copy to the website
+alwaysApply: true
+---
+
+# Standalone tools first
+
+When changing the accessibility checker or the search engine ranker:
+
+1. Update the standalone GitHub repo first:
+   - `https://github.com/jorgepaezdev/accessibility-checker`
+   - `https://github.com/jorgepaezdev/search-engine-tracker`
+2. Then copy the same product change onto `https://github.com/jorgepaezdev/website` (the `/accessibility-checker` and `/search-engine-ranking-tool` pages).
+3. Never change the website copy of a tool without updating the standalone repo first.
+4. Sync exclusively with GitHub. Never use Origin.
