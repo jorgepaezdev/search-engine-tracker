@@ -1,0 +1,42 @@
+name: Close external pull requests
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  close:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment and close
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              "Thanks for your interest in **search-engine-tracker**.",
+              "",
+              "This repository is open for **bug reports via Issues** only. We do not accept code contributions or pull requests.",
+              "",
+              "Please open a bug report instead:",
+              `https://github.com/${context.repo.owner}/${context.repo.repo}/issues/new?template=bug_report.yml`,
+              "",
+              "You can still clone the repo or use **Code → Download ZIP**."
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              state: "closed"
+            });
